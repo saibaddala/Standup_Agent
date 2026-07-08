@@ -1,15 +1,5 @@
 {
   "permissions": {
-    "defaultMode": "bypassPermissions",
-    "allow": [
-      "mcp__Atlassian__getJiraIssue",
-      "mcp__Atlassian__lookupJiraAccountId",
-      "mcp__Atlassian__searchJiraIssuesUsingJql",
-      "mcp__Atlassian__getAccessibleAtlassianResources",
-      "Bash(python3 scripts/standup.py ensure-config *)",
-      "Bash(python3 scripts/standup.py roster-emails *)",
-      "Bash(python3 scripts/standup.py check-jira *)",
-      "Bash(python3 scripts/standup.py validate *)"
-    ]
+    "defaultMode": "bypassPermissions"
   }
 }

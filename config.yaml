@@ -1,0 +1,95 @@
+## Give Google Chat Space Webhook URL here
+google_chat:
+  webhook_url: "https://chat.googleapis.com/v1/spaces/AAQA8XRcuPc/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=MHT7ZUIs_8IeYs3ZyNWDl3IREZB1GZAU75CPsDfuEBU&messageReplyOption=REPLY_MESSAGE_FALLBACK_TO_NEW_THREAD"
+
+## Give Team Developers Email IDs here [Can be skipped if not needed]
+team:
+  OMS:
+    - baddala.s@flipkart.com
+    - aman.raj1@flipkart.com
+    - ria.singh@flipkart.com
+    - pooja.jp@flipkart.com
+    - abhilasha.kumari@flipkart.com
+    - abdulzahidkhaa.vc@flipkart.com
+    - shristi.shree1@flipkart.com
+  FF:
+    - tanish.t1@flipkart.com
+    - jasandip.rana@flipkart.com
+    - pavan.guguloth@flipkart.com
+  CX:
+    - himanshu.sharma14@flipkart.com
+    - abhik.maji@flipkart.com
+
+###[Optional] If you want to restrict standup to specific team members in a particular Jira board (board + assignee filter).
+# Team without pods — dev name only in GChat:
+# team:
+#   - alice@flipkart.com
+#   - bob@flipkart.com
+#
+# Team with pods — pod name shown next to each dev in GChat:
+# team:
+#   CX-Pod:
+#     - sam@flipkart.com
+#     - altman@flipkart.com
+#   Supply-Pod:
+#     - elon@flipkart.com
+
+jira:
+  ## Give Team Specific Jira Board ID here
+  board_id: 3684
+  browse_base_url: https://flipkart.atlassian.net/browse
+  fields:
+    sprint: customfield_10020
+    story_points: customfield_10036
+  status_columns:
+    todo:
+      - Open
+      - Reopened
+      - ToDo
+      - Ready for Dev
+      - In Alignment
+      - Elaboration
+      - Planning
+      - Product Solution
+      - Prioritised
+      - On-Hold
+    in_progress:
+      - In Progress
+      - Deployed
+      - In Testing
+      - Dev Complete
+      - Tech Solution
+      - Internal Review
+      - Deployment Approved
+      - Manually Approved
+      - PENDING APPROVAL
+      - Pending Clarification
+      - Under Review
+      - Ready To Pick
+      - Integration
+      - Content Review
+      - Handover
+      - Hand-Off
+      - DRS
+      - Designer Acceptance Testing
+      - AB Analysis
+      - AB OnHold
+      - AB testing
+      - Fixed
+    in_review:
+      - Code Review
+    done:
+      - Done
+      - Descoped
+      - Resolved
+      - Closed
+      - Live
+      - No-Go-Live
+      - Not An Incident
+      - BU-RCA Review
+      - Closed No Action Item
+      - Resolved RCA Pending
+      - Review RCA
+
+thresholds:
+  close_out_risk_days: 3

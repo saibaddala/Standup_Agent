@@ -1,6 +1,6 @@
 ## Give Google Chat Space Webhook URL here
 google_chat:
-  webhook_url: "https://chat.googleapis.com/v1/spaces/AAQAvjMSJsI/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=HDyVqWdFe-XRlrPQtFQRDsmMRZkyegF7aWvypBVawVc&messageReplyOption=REPLY_MESSAGE_FALLBACK_TO_NEW_THREAD"
+  webhook_url: "https://chat.googleapis.com/v1/spaces/AAQA8XRcuPc/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=MHT7ZUIs_8IeYs3ZyNWDl3IREZB1GZAU75CPsDfuEBU&messageReplyOption=REPLY_MESSAGE_FALLBACK_TO_NEW_THREAD"
 
 ## Give Team Developers Email IDs here [Can be skipped if not needed]
 team:

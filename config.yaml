@@ -37,6 +37,9 @@ team:
 jira:
   ## Give Team Specific Jira Board ID here
   board_id: 3684
+  ## Board JQL scope — set once so automations skip step 2b (no Agile REST API on MCP).
+  ## Preferred: filter_id from Jira UI (Board settings → Edit filter query → ID in URL).
+  ## Current: filter_name from Board settings → General → Saved filter (verified via MCP).
   filter_name: "FCC-NextGen-Cx-And-SupplyChain"
   browse_base_url: https://flipkart.atlassian.net/browse
   fields:

@@ -590,8 +590,8 @@ def ensure_config(skill_root: Path, *, strict: bool = False, cwd: Path | None = 
         print("board_scope: ok (board_runtime.json present)")
     else:
         print(
-            "board_scope: missing — set jira.filter_id in config.yaml (recommended for "
-            "automations) or run step 2b before print-jql",
+            "board_scope: missing — set one of jira.filter_id, jira.filter_name, or "
+            "jira.jql_scope in config.yaml (recommended for automations) or run step 2b",
             file=sys.stderr,
         )
         if strict:

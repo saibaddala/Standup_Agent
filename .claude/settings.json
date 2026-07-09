@@ -2,7 +2,7 @@
   "permissions": {
     "defaultMode": "bypassPermissions",
     "allow": [
-      "Bash",
+      "Bash(python3:*)",
       "mcp__atlassian__getJiraIssue",
       "mcp__atlassian__searchJiraIssuesUsingJql",
       "mcp__atlassian__getAccessibleAtlassianResources",

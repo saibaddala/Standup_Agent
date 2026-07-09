@@ -42,6 +42,7 @@ WORKSPACE_PRESERVE_NAMES = frozenset({
     "config.yaml",
     "reference.md",
     "scripts",
+    ".gitignore",
 })
 
 ALLOWED_DECISION_STATUS = frozenset({

@@ -11,7 +11,7 @@ description: >-
 Execute the full pipeline without confirmation. Do not read [README.md](README.md).
 
 - Skill root = this directory
-- Python: `<skill_root>/scripts/standup.py` (venv: `<skill_root>/scripts/.venv/bin/python3`)
+- Python: `<skill_root>/scripts/standup.py` (venv: `<skill_root>/scripts/.venv/bin/python3`; fresh VM: `scripts/bootstrap_venv.sh`)
 - Config: `<skill_root>/config.yaml`
 - Read [reference.md](reference.md) before step 3
 
@@ -35,10 +35,10 @@ Execute the full pipeline without confirmation. Do not read [README.md](README.m
 
 | Step | Command / action |
 |------|------------------|
-| 0 | `standup.py verify <skill_root> --workspace <cwd>` (optional) |
+| 0 | Fresh VM only: `scripts/bootstrap_venv.sh`. Optional: `standup.py verify <skill_root> --workspace <cwd>` |
 | 1 | `standup.py ensure-config <skill_root> --strict` |
 | 2 | If `team` in config: `roster-emails` → `lookupJiraAccountId` per email → `apply-roster '<json>' --workspace <cwd>`. Skip when no `team`. |
-| 2b | `GET /rest/agile/1.0/board/{jira.board_id}` → `filter_id` (or saved filter name) → `apply-board-scope '{"filter_id":N}'` or `'{"filter_name":"…"}' --workspace <cwd>` |
+| 2b | **Skip when** `jira.filter_id`, `jira.filter_name`, or `jira.jql_scope` is set in `config.yaml`. Otherwise: `GET /rest/agile/1.0/board/{jira.board_id}` → `filter_id` (or saved filter name) → `apply-board-scope '{"filter_id":N}'` or `'{"filter_name":"…"}' --workspace <cwd>` |
 | 3 | `print-jql` → `getAccessibleAtlassianResources` → `cloudId`; four JQL searches → `jira_main.json`, `jira_act_ip.json`, `jira_act_cr.json`, `jira_act_done.json` |
 | 4 | `standup.py check-jira [cwd]` |
 | 5a | `standup.py build --main jira_main.json --act-ip jira_act_ip.json --act-cr jira_act_cr.json --act-done jira_act_done.json --config <skill_root>/config.yaml -o ./standup_payload.json` |
@@ -54,7 +54,7 @@ Step 7 re-runs finalize before POST; step 5e is still required.
 
 ## Cleanup (step 8)
 
-After step 7 (`post`), run `standup.py cleanup <cwd>`. Deletes **everything in workspace cwd except** `README.md`, `SKILL.md`, `config.yaml`, `reference.md`, and `scripts/`. Run cleanup even when post failed, was skipped, or errored.
+After step 7 (`post`), run `standup.py cleanup <cwd>`. Deletes **everything in workspace cwd except** `README.md`, `SKILL.md`, `config.yaml`, `reference.md`, `scripts/`, and `.gitignore`. Run cleanup even when post failed, was skipped, or errored.
 
 ## Step 1 failure
 

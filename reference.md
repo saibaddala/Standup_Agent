@@ -7,7 +7,10 @@ Orchestration: [SKILL.md](SKILL.md). Spec for steps 2–7. No caching between ru
 | Key | Required | Use |
 |-----|----------|-----|
 | `google_chat.webhook_url` | post | GChat webhook |
-| `jira.board_id` | yes | `GET /rest/agile/1.0/board/{id}` → `filter_id` |
+| `jira.board_id` | yes | Agile board ID (metadata); JQL scope comes from filter/jql_scope below |
+| `jira.filter_id` | no* | Saved board filter ID — **preferred**; skips step 2b (set once in Jira UI) |
+| `jira.filter_name` | no* | Saved filter name — alternative to `filter_id` |
+| `jira.jql_scope` | no* | Raw JQL clause when filter ID/name unavailable (e.g. `project = FCCNS OR project = MX`) |
 | `jira.status_columns` | yes | Fixed Jira `status.name` → four buckets (`todo`, `in_progress`, `in_review`, `done`). Hardcoded in config; same for every team on this board. |
 | `jira.browse_base_url` | yes | Ticket links in cards |
 | `jira.fields.sprint` | yes | Sprint custom field ID |
@@ -16,16 +19,18 @@ Orchestration: [SKILL.md](SKILL.md). Spec for steps 2–7. No caching between ru
 | `team` | no | `[email, …]` or `{pod: [email, …]}` — pod tag in GChat only when real pod names are set |
 | `thresholds.close_out_risk_days` | yes | Close-out risk card threshold |
 
+\*Set **one** of `jira.filter_id`, `jira.filter_name`, or `jira.jql_scope` in config for automations (skips step 2b). Otherwise step 2b must resolve scope via Agile REST API.
+
 Do not store `accountId` or `name` in config — resolve each run (step 2). Do not edit `jira.status_columns` during a run.
 
 ### Scope modes
 
 | Mode | Condition | JQL base | Roster at `build` |
 |------|-----------|----------|-------------------|
-| `board_only` | no `team` emails | `filter = <FILTER> AND sprint in openSprints()` | assignees from `jira_main.json` |
+| `board_only` | no `team` emails | `<SCOPE> AND sprint in openSprints()` | assignees from `jira_main.json` |
 | `board_and_emails` | `team` emails set | above + `assignee in (<ASSIGNEES>)` | `roster_resolved.json` |
 
-`<FILTER>` = `board_runtime.json` → `filter_id` (numeric) or `filter_name` (saved filter name). JQL: `filter = <id>` or `filter = "<name>"`. `<ASSIGNEES>` = quoted `accountId`s from `roster_resolved.json`.
+`<SCOPE>` = `filter = <id>`, `filter = "<name>"`, or `jira.jql_scope` from config.yaml (or `board_runtime.json` after step 2b). `<ASSIGNEES>` = quoted `accountId`s from `roster_resolved.json`.
 
 ### Team (`config.yaml`)
 
@@ -45,10 +50,16 @@ Pod keys `members`, `team`, `default`, `_` are treated as no-pod (name only).
 
 Skip when no `team` emails.
 
-## Step 2b — `board_runtime.json`
+## Step 2b — board scope (skip when configured)
 
-1. `GET /rest/agile/1.0/board/{jira.board_id}` → read `filter.id`, or use the board’s saved filter **name** when the agile API is unavailable
-2. `standup.py apply-board-scope '{"filter_id": <id>}'` or `'{"filter_name": "<saved filter name>"}' --workspace <cwd>`
+**Automations:** when `config.yaml` has `jira.filter_id`, `jira.filter_name`, or `jira.jql_scope`, go straight to step 3 — do not call the Agile board API.
+
+**Manual / first-time setup** (no scope in config):
+
+1. `GET /rest/agile/1.0/board/{jira.board_id}` → read `filter.id`, or use the board’s saved filter **name**
+2. `standup.py apply-board-scope '{"filter_id": <id>}'`, `'{"filter_name": "<name>"}'`, or `'{"jql_scope": "<clause>"}' --workspace <cwd>`
+
+To find `filter_id` in Jira UI: open the board → board settings / filter → “Edit filter query” — the URL contains the numeric filter ID. Add it to `config.yaml` as `jira.filter_id` and remove `filter_name` / `jql_scope` if set.
 
 ## Step 3 — MCP + JQL
 
@@ -182,7 +193,7 @@ One object per in-progress key.
 
 Pipeline steps write JSON and other files under workspace cwd during a run. **Step 8 (`standup.py cleanup <cwd>`) deletes every cwd entry except the permanent skill-root files** — whether GChat post succeeded or failed. Do not run cleanup at pipeline start.
 
-**Preserved (never deleted):** `README.md`, `SKILL.md`, `config.yaml`, `reference.md`, `scripts/`
+**Preserved (never deleted):** `README.md`, `SKILL.md`, `config.yaml`, `reference.md`, `scripts/`, `.gitignore`
 
 **Typical scratch files (removed by cleanup):**
 

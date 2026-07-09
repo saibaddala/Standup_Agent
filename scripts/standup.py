@@ -318,11 +318,11 @@ def main() -> None:
 
     p = sub.add_parser(
         "apply-board-scope",
-        help="Write board_runtime.json with filter_id from Jira board lookup (step 2b)",
+        help="Write board_runtime.json from board scope JSON (step 2b; skip when config has scope)",
     )
     p.add_argument(
         "board_scope_json",
-        help='JSON with filter_id and/or filter_name from board lookup (step 2b)',
+        help='JSON with one of filter_id, filter_name, jql_scope (step 2b)',
     )
     p.add_argument("--workspace", type=Path, default=None)
     p.set_defaults(func=cmd_apply_board_scope)

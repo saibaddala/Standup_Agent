@@ -12,7 +12,7 @@ except ImportError:  # pragma: no cover
 
 _CONFIG_NAME = "config.yaml"
 _ROSTER_RESOLVED_FILE = "roster_resolved.json"  # keep in sync with payload.ROSTER_RESOLVED_FILE
-BOARD_RUNTIME_FILE = "board_runtime.json"  # workspace — filter_id from MCP step 2b
+BOARD_RUNTIME_FILE = "board_runtime.json"  # workspace scratch — optional when scope is in config.yaml
 _PLACEHOLDER_WEBHOOK_MARKERS = ("/spaces/.../", "key=...&token=...")
 # Dict keys treated as “no pod” — GChat shows dev name only (no [pod] tag).
 _NO_POD_TEAM_KEYS = frozenset({"", "members", "team", "default", "_"})
@@ -85,6 +85,31 @@ def parse_board_id(raw: dict) -> int:
         return int(board_id)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{_CONFIG_NAME}: jira.board_id must be an integer") from exc
+
+
+def parse_board_filter(raw: dict) -> dict:
+    """Optional JQL scope from config — skips step 2b when set (automation-friendly)."""
+    jira = raw.get("jira")
+    if not isinstance(jira, dict):
+        return {}
+    out: dict = {}
+    filter_id = jira.get("filter_id")
+    if filter_id is not None:
+        try:
+            out["filter_id"] = int(filter_id)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"{_CONFIG_NAME}: jira.filter_id must be an integer") from exc
+    filter_name = (jira.get("filter_name") or "").strip()
+    if filter_name:
+        out["filter_name"] = filter_name
+    jql_scope = (jira.get("jql_scope") or "").strip()
+    if jql_scope:
+        out["jql_scope"] = jql_scope
+    if sum(1 for k in ("filter_id", "filter_name", "jql_scope") if k in out) > 1:
+        raise ValueError(
+            f"{_CONFIG_NAME}: set only one of jira.filter_id, jira.filter_name, jira.jql_scope",
+        )
+    return out
 
 
 def parse_status_columns(raw: dict) -> dict[str, list[str]]:
@@ -269,6 +294,7 @@ def normalize_config(raw: dict, *, resolved: dict[str, dict] | None = None) -> d
 
     team_emails = parse_team_emails(raw)
     board_id = parse_board_id(raw)
+    board_filter = parse_board_filter(raw)
     status_columns = parse_status_columns(raw)
     roster = _build_roster(team_emails, resolved)
     scope_mode = "board_and_emails" if team_emails else "board_only"
@@ -277,6 +303,7 @@ def normalize_config(raw: dict, *, resolved: dict[str, dict] | None = None) -> d
         "webhook": gc.get("webhook_url", ""),
         "jira_base": jira["browse_base_url"],
         "board_id": board_id,
+        **board_filter,
         "status_columns": status_columns,
         "status_buckets": status_buckets_from_columns(status_columns),
         "scope_mode": scope_mode,
@@ -329,13 +356,21 @@ def jql_assignee_list(cfg: dict) -> str:
 def resolve_run_scope(cfg: dict, workspace: Path) -> dict:
     """
     Jira status → bucket mapping from config.yaml.
-    JQL filter_id overlaid from workspace board_runtime.json (step 2b).
+    JQL scope from config.yaml (filter_id / filter_name / jql_scope), overlaid by
+    workspace board_runtime.json when step 2b ran.
     """
     scope = {
         "board_id": cfg["board_id"],
         "columns": cfg["status_columns"],
         "status_buckets": cfg["status_buckets"],
     }
+    if cfg.get("filter_id") is not None:
+        scope["filter_id"] = cfg["filter_id"]
+    if cfg.get("filter_name"):
+        scope["filter_name"] = cfg["filter_name"]
+    if cfg.get("jql_scope"):
+        scope["jql_scope"] = cfg["jql_scope"]
+
     runtime_path = workspace.resolve() / BOARD_RUNTIME_FILE
     if runtime_path.is_file():
         try:
@@ -345,9 +380,18 @@ def resolve_run_scope(cfg: dict, workspace: Path) -> dict:
         if isinstance(runtime, dict):
             if runtime.get("filter_id") is not None:
                 scope["filter_id"] = runtime["filter_id"]
+                scope.pop("filter_name", None)
+                scope.pop("jql_scope", None)
             filter_name = (runtime.get("filter_name") or "").strip()
             if filter_name:
                 scope["filter_name"] = filter_name
+                scope.pop("filter_id", None)
+                scope.pop("jql_scope", None)
+            jql_scope = (runtime.get("jql_scope") or "").strip()
+            if jql_scope:
+                scope["jql_scope"] = jql_scope
+                scope.pop("filter_id", None)
+                scope.pop("filter_name", None)
     return scope
 
 
@@ -360,9 +404,11 @@ def apply_board_scope(workspace: Path, scope: dict) -> int:
     data = dict(scope)
     filter_id = data.get("filter_id")
     filter_name = (data.get("filter_name") or "").strip()
-    if filter_id is None and not filter_name:
+    jql_scope = (data.get("jql_scope") or "").strip()
+    if filter_id is None and not filter_name and not jql_scope:
         print(
-            "ERROR: need filter_id or filter_name from GET /rest/agile/1.0/board/{board_id} (step 2b)",
+            "ERROR: need filter_id, filter_name, or jql_scope "
+            "(from GET /rest/agile/1.0/board/{board_id} or config.yaml)",
             file=sys.stderr,
         )
         return 1
@@ -374,6 +420,8 @@ def apply_board_scope(workspace: Path, scope: dict) -> int:
         runtime_out["filter_id"] = filter_id
     if filter_name:
         runtime_out["filter_name"] = filter_name
+    if jql_scope:
+        runtime_out["jql_scope"] = jql_scope
     out.write_text(json.dumps(runtime_out, indent=2), encoding="utf-8")
     print(f"Wrote {out} — status buckets from config.yaml jira.status_columns")
     return 0
@@ -386,15 +434,19 @@ def jql_base_clause(cfg: dict, run_scope: dict | None = None) -> str:
 
     filter_id = run_scope.get("filter_id")
     filter_name = (run_scope.get("filter_name") or "").strip()
+    jql_scope = (run_scope.get("jql_scope") or "").strip()
     if filter_id is not None:
         scope_clause = f"filter = {filter_id}"
     elif filter_name:
         scope_clause = f'filter = "{filter_name}"'
+    elif jql_scope:
+        scope_clause = jql_scope
     else:
         board_id = cfg.get("board_id")
         raise ValueError(
-            f"board_runtime.json missing filter_id/filter_name — step 2b: fetch board {board_id} "
-            f"via GET /rest/agile/1.0/board/{board_id} and apply-board-scope",
+            f"no JQL board scope — set jira.filter_id (preferred), jira.filter_name, or "
+            f"jira.jql_scope in config.yaml, or run step 2b: GET /rest/agile/1.0/board/{board_id} "
+            f"and apply-board-scope",
         )
 
     parts = [scope_clause, "sprint in openSprints()"]
@@ -522,5 +574,27 @@ def ensure_config(skill_root: Path, *, strict: bool = False, cwd: Path | None = 
 
     n = len(cfg.get("status_buckets") or {})
     print(f"status_columns: ok ({n} fixed Jira status(es) → 4 buckets)")
+
+    has_config_scope = (
+        cfg.get("filter_id") is not None or cfg.get("filter_name") or cfg.get("jql_scope")
+    )
+    has_runtime_scope = (check_cwd / BOARD_RUNTIME_FILE).is_file()
+    if has_config_scope:
+        kind = (
+            "filter_id" if cfg.get("filter_id") is not None
+            else "filter_name" if cfg.get("filter_name")
+            else "jql_scope"
+        )
+        print(f"board_scope: ok ({kind} from config.yaml — step 2b skippable)")
+    elif has_runtime_scope:
+        print("board_scope: ok (board_runtime.json present)")
+    else:
+        print(
+            "board_scope: missing — set jira.filter_id in config.yaml (recommended for "
+            "automations) or run step 2b before print-jql",
+            file=sys.stderr,
+        )
+        if strict:
+            exit_code = 1
 
     return exit_code

@@ -30,6 +30,9 @@ Execute the full pipeline without confirmation. Do not read [README.md](README.m
 11. Edit `config.yaml` during a run.
 12. Hand-author GChat card text.
 13. Create helper scripts (`.py`), temp dirs (`.tmp_issues`, `.staging`, etc.), or subagents for step 5b — use parallel `getJiraIssue` MCP calls only.
+14. **Hand-write, condense, or simplify any MCP JSON response** — save the exact raw response to file verbatim; never reconstruct it manually.
+15. **Skip pagination check** — after every `searchJiraIssuesUsingJql` call, verify `isLast: true` in the saved file before proceeding. If `isLast: false`, make additional calls with increasing `startAt` offset until `isLast: true`, then merge all `issues` arrays into one file. `check-jira` will error on `isLast: false`.
+16. **Read only partial content of a large MCP response file** — always read or copy the full file; never rely on a truncated preview to judge completeness.
 
 ## Pipeline (workspace cwd)
 

@@ -73,6 +73,11 @@ def load_jira_issues(path: Path) -> list:
     issues = data.get("issues")
     if not isinstance(issues, list):
         raise ValueError(f"{path.name}: missing 'issues' array")
+    if data.get("isLast") is False:
+        raise ValueError(
+            f"{path.name}: isLast=false — MCP response is paginated; "
+            "re-fetch with higher limit or additional startAt pages until isLast=true"
+        )
     return issues
 
 

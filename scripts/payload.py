@@ -100,6 +100,7 @@ def validate_jira_bundle(cwd: Path) -> list[str]:
     """Gate after step 4 — all four JQL files present, valid, and not duplicates/swapped."""
     errors: list[str] = []
     digests: dict[str, str] = {}
+    empty_activity: dict[str, bool] = {}
 
     for label, name in JIRA_ARTIFACTS.items():
         path = cwd / name
@@ -114,6 +115,7 @@ def validate_jira_bundle(cwd: Path) -> list[str]:
         digests[label] = file_sha256(path)
         if label == "main" and not issues:
             errors.append(f"{name}: main query returned zero issues")
+        empty_activity[label] = label != "main" and not issues
 
     seen_digest: dict[str, str] = {}
     activity_pair = frozenset({"act_ip", "act_cr"})
@@ -122,6 +124,10 @@ def validate_jira_bundle(cwd: Path) -> list[str]:
             other = next(k for k, v in digests.items() if v == digest and k != label)
             if frozenset({label, other}) == activity_pair:
                 # Same tickets may transition IP → CR within 24h; JQL overlap is valid.
+                continue
+            if empty_activity.get(label) and empty_activity.get(other):
+                # Two independently-empty activity results are trivially identical
+                # (no issues means no content to differ on) — not a duplicate fetch.
                 continue
             errors.append(
                 f"{JIRA_ARTIFACTS[label]} is identical to {JIRA_ARTIFACTS[other]} — "
